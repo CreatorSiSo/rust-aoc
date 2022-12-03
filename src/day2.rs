@@ -1,93 +1,97 @@
-pub fn generator(input: &str) -> Vec<(&str, &str)> {
-	input
-		.lines()
-		.map(|line| {
-			let mut iter = line.split_whitespace();
-			let left = iter.next().unwrap();
-			let right = iter.next().unwrap();
-			(left, right)
-		})
-		.collect()
+use std::str::FromStr;
+
+fn generator(input: &str) -> impl Iterator<Item = (&str, &str)> {
+	input.lines().map(|line| {
+		let mut iter = line.split_whitespace();
+		let left = iter.next().unwrap();
+		let right = iter.next().unwrap();
+		debug_assert_eq!(iter.next(), None);
+		(left, right)
+	})
 }
 
 fn calc_score(other: Shape, own: Shape) -> u32 {
 	own as u32
 		+ match (own, other) {
+			// loose
+			(Shape::Rock, Shape::Paper)
+			| (Shape::Paper, Shape::Scissors)
+			| (Shape::Scissors, Shape::Rock) => 0,
 			// draw
 			(Shape::Rock, Shape::Rock)
 			| (Shape::Paper, Shape::Paper)
 			| (Shape::Scissors, Shape::Scissors) => 3,
 			// win
-			(Shape::Rock, Shape::Scissors) => 6,
-			(Shape::Paper, Shape::Rock) => 6,
-			(Shape::Scissors, Shape::Paper) => 6,
-			// loose
-			(Shape::Rock, Shape::Paper) => 0,
-			(Shape::Paper, Shape::Scissors) => 0,
-			(Shape::Scissors, Shape::Rock) => 0,
+			(Shape::Rock, Shape::Scissors)
+			| (Shape::Paper, Shape::Rock)
+			| (Shape::Scissors, Shape::Paper) => 6,
 		}
 }
 
-pub fn part_1<'a>(input: &[(&'a str, &'a str)]) -> u32 {
-	input
-		.into_iter()
-		.map(|(left, right)| (Shape::from(left), Shape::from(right)))
-		.fold(0, |score, (other, own)| score + calc_score(other, own))
+pub fn part_1(input: &str) -> u32 {
+	generator(input).fold(0, |score, (left, right)| {
+		let other = left.parse().unwrap();
+		let own = right.parse().unwrap();
+		score + calc_score(other, own)
+	})
 }
 
-pub fn part_2<'a>(input: &[(&'a str, &'a str)]) -> u32 {
-	input
-		.into_iter()
-		.map(|(left, right)| (Shape::from(left), Guide::from(right)))
-		.fold(0, |score, (other, guide)| {
-			score
-				+ calc_score(
-					other,
-					match (guide, other) {
-						(Guide::Draw, other) => other,
-						(Guide::Loose, Shape::Rock) => Shape::Scissors,
-						(Guide::Loose, Shape::Paper) => Shape::Rock,
-						(Guide::Loose, Shape::Scissors) => Shape::Paper,
-						(Guide::Win, Shape::Rock) => Shape::Paper,
-						(Guide::Win, Shape::Paper) => Shape::Scissors,
-						(Guide::Win, Shape::Scissors) => Shape::Rock,
-					},
-				)
-		})
+pub fn part_2(input: &str) -> u32 {
+	generator(input).fold(0, |score, (left, right)| {
+		let other = left.parse().unwrap();
+		let outcome = right.parse().unwrap();
+		score
+			+ calc_score(
+				other,
+				match (outcome, other) {
+					(Outcome::Draw, _) => other,
+					(Outcome::Loose, Shape::Rock) => Shape::Scissors,
+					(Outcome::Loose, Shape::Paper) => Shape::Rock,
+					(Outcome::Loose, Shape::Scissors) => Shape::Paper,
+					(Outcome::Win, Shape::Rock) => Shape::Paper,
+					(Outcome::Win, Shape::Paper) => Shape::Scissors,
+					(Outcome::Win, Shape::Scissors) => Shape::Rock,
+				},
+			)
+	})
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Shape {
 	Rock = 1,
 	Paper = 2,
 	Scissors = 3,
 }
 
-impl Shape {
-	fn from(input: &str) -> Self {
-		match input {
-			"A" | "X" => Self::Rock,
-			"B" | "Y" => Self::Paper,
-			"C" | "Z" => Self::Scissors,
-			_ => panic!("Cant parse Shape from `{input}`"),
+impl FromStr for Shape {
+	type Err = String;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s {
+			"A" | "X" => Ok(Self::Rock),
+			"B" | "Y" => Ok(Self::Paper),
+			"C" | "Z" => Ok(Self::Scissors),
+			_ => Err(format!("Unable to parse Shape from `{s}`")),
 		}
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Guide {
+#[derive(PartialEq, Eq)]
+pub enum Outcome {
 	Loose = 1,
 	Draw = 2,
 	Win = 3,
 }
 
-impl Guide {
-	fn from(input: &str) -> Self {
-		match input {
-			"A" | "X" => Self::Loose,
-			"B" | "Y" => Self::Draw,
-			"C" | "Z" => Self::Win,
-			_ => panic!("Cant parse Guide from `{input}`"),
+impl FromStr for Outcome {
+	type Err = String;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s {
+			"X" => Ok(Self::Loose),
+			"Y" => Ok(Self::Draw),
+			"Z" => Ok(Self::Win),
+			_ => Err(format!("Unable to parse Outcome from `{s}`")),
 		}
 	}
 }
