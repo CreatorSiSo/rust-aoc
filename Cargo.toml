@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 default-run = "2022"
 
+[[bin]]
+name = "2015"
+path = "./src/2015/main.rs"
 
 [[bin]]
 name = "2022"
